@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recipe Box</title>
+<meta name="theme-color" content="#5c351c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recipes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Special+Elite&family=Libre+Franklin:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm, handled, a little nostalgic but tidy and usable.
+   IDEA: grandma's walnut recipe box: divider tabs you flip through, lined 3x5 index cards.
+   PICTURE: the box itself, divider tabs along the top, cards stacked and overlapping.
+   COLOUR and TYPE: walnut wood, white lined cards (blue rules, red header line), tab colours; typewriter titles, handwriting entries.
+   LAYOUT: one column; tab strip, card stack, card opens full size over the box. */
+:root{color-scheme:light dark;
+--bg:light-dark(#efe6d8,#1b1410);--ink:light-dark(#2a1d14,#f3e9dc);
+--wood:light-dark(#7a4a2a,#4a2b17);--wood2:light-dark(#5c351c,#2f1a0d);
+--card:#fffdf8;--cardink:#2a2622;--rule:#b9d4ea;--red:#d9534f;--muted:#6f655b}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Libre Franklin",system-ui,sans-serif;overflow-x:clip}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #3b82c4;outline-offset:2px}
+header{max-width:900px;margin:0 auto;padding:20px max(4vw,16px) 8px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font:400 clamp(30px,6vw,44px)/1.05 "Special Elite",monospace;margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;flex:1 1 280px;justify-content:flex-end}
+.search{flex:1 1 180px;min-height:44px;border:1px solid #c9b9a3;border-radius:10px;padding:8px 12px;font-size:16px;background:light-dark(#fff,#2a201a);color:var(--ink)}
+.btn{min-height:44px;padding:8px 16px;border-radius:10px;border:0;background:var(--wood2);color:#fff;font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid #c9b9a3}
+.btn.danger{background:var(--red)}
+main{max-width:900px;margin:0 auto;padding:8px max(4vw,16px) 40px}
+.box{background:linear-gradient(180deg,var(--wood),var(--wood2));border-radius:18px;padding:14px 14px 22px;box-shadow:0 18px 30px -18px #000a, inset 0 2px 0 #ffffff22;
+ background-image:repeating-linear-gradient(95deg,#0000 0 14px,#0000000d 14px 16px),linear-gradient(180deg,var(--wood),var(--wood2))}
+.tabs{display:flex;gap:4px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;scroll-snap-align:start;min-height:44px;padding:10px 18px 8px;border:0;border-radius:12px 12px 0 0;background:var(--c);color:#2a1d14;font:700 16px "Libre Franklin",sans-serif;transform:translateY(8px);transition:transform .2s;box-shadow:inset 0 -6px 8px -6px #0003}
+.tab[aria-selected=true]{transform:translateY(0)}
+.tab small{font-weight:400;opacity:.7;margin-left:6px}
+.well{background:var(--sel,#e9d6a4);border-radius:0 0 12px 12px;padding:16px 12px 12px;min-height:340px;box-shadow:inset 0 10px 14px -10px #0004}
+.stack{list-style:none;margin:0;padding:0}
+.stack li{margin-top:-14px}.stack li:first-child{margin-top:0}
+.idx{display:block;width:100%;text-align:left;border:0;background:var(--card);color:var(--cardink);border-radius:6px;padding:12px 16px 18px;box-shadow:0 -2px 4px #0002,0 2px 0 #0001;
+ background-image:linear-gradient(var(--card) 0 42px,var(--red) 42px 44px,#0000 44px),repeating-linear-gradient(var(--card) 0 27px,var(--rule) 27px 28px);transition:transform .18s}
+.idx:hover,.idx:focus-visible{transform:translateY(-8px)}
+.idx b{font:400 20px/1.2 "Special Elite",monospace;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.idx span{font:500 20px "Caveat",cursive;color:var(--muted);display:block;margin-top:10px}
+.empty{text-align:center;padding:60px 16px;color:#4a3826;font:600 24px "Caveat",cursive}
+.note{font-size:13px;color:var(--muted);margin:12px 4px 0}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+/* overlay card */
+.ov{position:fixed;inset:0;background:#120a05b3;display:none;align-items:flex-start;justify-content:center;padding:max(3vh,12px) 12px;overflow-y:auto;z-index:5}
+.ov.on{display:flex}
+.big{background:var(--card);color:var(--cardink);width:min(680px,100%);border-radius:8px;padding:20px clamp(16px,4vw,32px) 24px;box-shadow:0 20px 40px #0008;
+ background-image:linear-gradient(var(--card) 0 74px,var(--red) 74px 76px,#0000 76px),repeating-linear-gradient(var(--card) 0 31px,var(--rule) 31px 32px);animation:pop .22s ease-out}
+@keyframes pop{from{transform:translateY(24px) rotate(-1deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){.big{animation:none}.idx,.tab{transition:none}}
+.big h2{font:400 clamp(24px,5vw,32px)/1.1 "Special Elite",monospace;margin:4px 0 0;text-wrap:balance}
+.meta{font:500 20px/32px "Caveat",cursive;color:var(--muted);margin-top:14px}
+.big h3{font:700 13px/32px "Libre Franklin",sans-serif;margin:0;color:var(--red)}
+.big ul,.big ol{margin:0;padding-left:24px;font:500 22px/32px "Caveat",cursive}
+.big p{font:500 22px/32px "Caveat",cursive;margin:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:24px}
+form label{display:block;font-weight:600;font-size:14px;margin-top:14px}
+form input,form select,form textarea{width:100%;min-height:44px;font-size:16px;border:1px solid #cbbfae;border-radius:8px;padding:8px 10px;background:#fff;color:#222}
+form textarea{min-height:110px;resize:vertical}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px}
+.hint{font-size:13px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#2a1d14;color:#fff;padding:10px 16px;border-radius:10px;display:none;z-index:9}
+.toast.on{display:flex;gap:12px;align-items:center}
+.toast button{background:none;border:0;color:#ffd27a;font-weight:700;min-height:32px}
+@media(max-width:600px){.two{grid-template-columns:minmax(0,1fr)}.tools{justify-content:stretch}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Recipe Box</h1>
+  <div class="tools">
+    <input id="q" class="search" type="search" placeholder="Search recipes or ingredients" aria-label="Search">
+    <button id="add" class="btn">+ New card</button>
+  </div>
+</header>
+<main>
+  <div class="box">
+    <div id="tabs" class="tabs" role="tablist" aria-label="Categories"></div>
+    <div id="well" class="well"><ul id="stack" class="stack"></ul></div>
+  </div>
+  <div class="nav">
+    <button id="prev" class="btn ghost">‹ Prev tab</button>
+    <button id="data" class="btn ghost">Backup / restore</button>
+    <button id="next" class="btn ghost">Next tab ›</button>
+  </div>
+  <p class="note">Starts with a few sample cards. Your recipes are saved in this browser only.</p>
+</main>
+<div id="ov" class="ov" role="dialog" aria-modal="true"><div id="sheet" class="big"></div></div>
+<div id="toast" class="toast"><span id="tmsg"></span><button id="undo">Undo</button></div>
+<input id="file" type="file" accept=".json,application/json" hidden>
+
+<script>
+{
+const CATS=[["All","#e9d6a4"],["Breakfast","#f6c89f"],["Soups & Salads","#b9dcb0"],["Mains","#f2a7a0"],["Sides","#f3e19a"],["Baking","#d8c3e8"],["Desserts","#f5b8d0"],["Drinks","#a9d3ea"]];
+const KEY="recipe-box-v1";
+const SAMPLE=[
+ {id:"s1",title:"Buttermilk Pancakes",cat:"Breakfast",time:"25 min",serves:"4",ing:["2 cups flour","2 tbsp sugar","2 tsp baking powder","1 tsp baking soda","2 cups buttermilk","2 eggs","4 tbsp melted butter"],steps:["Whisk dry ingredients.","Whisk buttermilk, eggs and butter; fold into dry until just combined.","Cook 1/4 cup scoops on a buttered griddle until bubbles form, then flip."],notes:"Let the batter rest 5 minutes."},
+ {id:"s2",title:"Tomato Basil Soup",cat:"Soups & Salads",time:"40 min",serves:"6",ing:["2 tbsp olive oil","1 onion, diced","3 cloves garlic","2 cans (28 oz) whole tomatoes","2 cups stock","1/2 cup cream","Handful of basil"],steps:["Soften onion in oil, add garlic.","Add tomatoes and stock; simmer 20 minutes.","Blend with basil, stir in cream, season."],notes:"Great with grilled cheese."},
+ {id:"s3",title:"Sunday Roast Chicken",cat:"Mains",time:"1 hr 30",serves:"4",ing:["1 whole chicken (4 lb)","1 lemon","4 sprigs thyme","3 tbsp butter","Salt and pepper"],steps:["Heat oven to 425°F.","Rub chicken with butter, season, stuff with lemon and thyme.","Roast about 75 minutes to 165°F in the thigh; rest 15 minutes."],notes:""},
+ {id:"s4",title:"Garlic Green Beans",cat:"Sides",time:"15 min",serves:"4",ing:["1 lb green beans","2 tbsp butter","3 cloves garlic, sliced","Squeeze of lemon"],steps:["Blanch beans 3 minutes; drain.","Sauté garlic in butter, toss beans, finish with lemon."],notes:""},
+ {id:"s5",title:"Banana Bread",cat:"Baking",time:"1 hr 10",serves:"1 loaf",ing:["3 ripe bananas","1/3 cup melted butter","3/4 cup sugar","1 egg","1 tsp baking soda","1 1/2 cups flour","Pinch of salt"],steps:["Heat oven to 350°F.","Mash bananas, stir in butter, sugar, egg.","Add soda, salt, flour. Bake in a loaf pan 55–60 minutes."],notes:"Add walnuts if you like."},
+ {id:"s6",title:"Grandma's Apple Crisp",cat:"Desserts",time:"55 min",serves:"8",ing:["6 apples, sliced","1 tbsp lemon juice","1 cup oats","3/4 cup brown sugar","1/2 cup flour","1 tsp cinnamon","1/2 cup cold butter"],steps:["Heat oven to 375°F; toss apples with lemon in a dish.","Rub oats, sugar, flour, cinnamon and butter into crumbs.","Scatter over apples; bake 40 minutes until bubbling."],notes:""},
+ {id:"s7",title:"Fresh Lemonade",cat:"Drinks",time:"10 min",serves:"6",ing:["1 cup lemon juice","3/4 cup sugar","5 cups cold water","Ice"],steps:["Dissolve sugar in 1 cup hot water.","Combine with juice and remaining water; chill and serve over ice."],notes:""}
+];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let recipes=load(), cat=getTab(), query="", last=null;
+
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(r))return r}catch(e){}return SAMPLE.slice()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(recipes))}catch(e){}}
+function getTab(){try{const t=localStorage.getItem(KEY+"-tab");if(CATS.some(c=>c[0]===t))return t}catch(e){}return "All"}
+function setTab(t){cat=t;try{localStorage.setItem(KEY+"-tab",t)}catch(e){}render();
+  document.querySelector(`.tab[data-c="${CSS.escape(t)}"]`)?.scrollIntoView({inline:"nearest",block:"nearest",behavior:"smooth"})}
+
+function visible(){
+  const q=query.toLowerCase();
+  return recipes.filter(r=>(cat==="All"||r.cat===cat)&&(!q||[r.title,...(r.ing||[]),r.notes].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>a.title.localeCompare(b.title));
+}
+function render(){
+  $("#tabs").innerHTML=CATS.map(([n,c])=>{const k=n==="All"?recipes.length:recipes.filter(r=>r.cat===n).length;
+    return `<button class="tab" role="tab" style="--c:${c}" data-c="${esc(n)}" aria-selected="${n===cat}">${esc(n)}<small>${k}</small></button>`}).join("");
+  $("#well").style.setProperty("--sel",CATS.find(c=>c[0]===cat)[1]);
+  const list=visible();
+  $("#stack").innerHTML=list.length?list.map(r=>`<li><button class="idx" data-id="${esc(r.id)}"><b>${esc(r.title)}</b><span>${esc([cat==="All"?r.cat:"",r.time,r.serves&&"serves "+r.serves].filter(Boolean).join(" · "))}</span></button></li>`).join("")
+    :`<li class="empty">${query?"No cards match that search.":"No cards behind this tab yet."}</li>`;
+}
+function open(html){$("#sheet").innerHTML=html;$("#ov").classList.add("on");document.body.style.overflow="hidden";$("#sheet").querySelector("button,input")?.focus()}
+function close(){$("#ov").classList.remove("on");document.body.style.overflow=""}
+
+function view(id){
+  const r=recipes.find(x=>x.id===id);if(!r)return;
+  open(`<h2>${esc(r.title)}</h2>
+  <div class="meta">${esc([r.cat,r.time,r.serves&&"serves "+r.serves].filter(Boolean).join(" · "))}</div>
+  <h3>Ingredients</h3><ul>${(r.ing||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul>
+  <h3>Directions</h3><ol>${(r.steps||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ol>
+  ${r.notes?`<h3>Notes</h3><p>${esc(r.notes)}</p>`:""}
+  <div class="row"><button class="btn danger" data-act="del" data-id="${esc(r.id)}">Delete</button><button class="btn ghost" data-act="edit" data-id="${esc(r.id)}">Edit</button><button class="btn" data-act="close">Close</button></div>`);
+}
+function edit(id){
+  const r=recipes.find(x=>x.id===id)||{title:"",cat:cat==="All"?"Mains":cat,time:"",serves:"",ing:[],steps:[],notes:""};
+  open(`<form id="f"><h2>${id?"Edit card":"New card"}</h2>
+  <label>Recipe name<input name="title" required value="${esc(r.title)}"></label>
+  <div class="two"><label>Tab<select name="cat">${CATS.slice(1).map(([n])=>`<option${n===r.cat?" selected":""}>${esc(n)}</option>`).join("")}</select></label>
+  <label>Time<input name="time" value="${esc(r.time)}" placeholder="45 min"></label></div>
+  <label>Serves<input name="serves" value="${esc(r.serves)}" placeholder="4"></label>
+  <label>Ingredients <span class="hint">one per line</span><textarea name="ing">${esc((r.ing||[]).join("\n"))}</textarea></label>
+  <label>Directions <span class="hint">one step per line</span><textarea name="steps">${esc((r.steps||[]).join("\n"))}</textarea></label>
+  <label>Notes<textarea name="notes" style="min-height:70px">${esc(r.notes)}</textarea></label>
+  <div class="row"><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn">Save card</button></div></form>`);
+  $("#f").addEventListener("submit",e=>{e.preventDefault();const d=new FormData(e.target),lines=k=>d.get(k).split("\n").map(s=>s.trim()).filter(Boolean);
+    const rec={id:id||"r"+Date.now().toString(36),title:d.get("title").trim(),cat:d.get("cat"),time:d.get("time").trim(),serves:d.get("serves").trim(),ing:lines("ing"),steps:lines("steps"),notes:d.get("notes").trim()};
+    recipes=id?recipes.map(x=>x.id===id?rec:x):[...recipes,rec];save();cat!=="All"&&cat!==rec.cat?setTab(rec.cat):render();view(rec.id);});
+}
+function del(id){
+  const i=recipes.findIndex(x=>x.id===id);last={rec:recipes[i],i};recipes.splice(i,1);save();close();render();
+  toast(`Deleted “${last.rec.title}”`,true);
+}
+let tt;function toast(m,undo){$("#tmsg").textContent=m;$("#undo").style.display=undo?"":"none";$("#toast").classList.add("on");clearTimeout(tt);tt=setTimeout(()=>$("#toast").classList.remove("on"),5000)}
+function backup(){
+  open(`<h2>Backup / restore</h2>
+  <p style="font:16px/1.5 'Libre Franklin',sans-serif;margin-top:16px">Copy your cards as text to keep somewhere safe, or load a backup file.</p>
+  <form><textarea id="dump" readonly style="min-height:160px;font:13px monospace">${esc(JSON.stringify(recipes,null,1))}</textarea></form>
+  <div class="row"><button class="btn ghost" data-act="close">Close</button><button class="btn ghost" data-act="load">Load file…</button><button class="btn" data-act="copy">Copy</button></div>`);
+}
+
+$("#tabs").addEventListener("click",e=>{const t=e.target.closest(".tab");t&&setTab(t.dataset.c)});
+$("#stack").addEventListener("click",e=>{const b=e.target.closest(".idx");b&&view(b.dataset.id)});
+$("#sheet").addEventListener("click",async e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="close")close();if(a==="edit")edit(b.dataset.id);if(a==="del")del(b.dataset.id);if(a==="load")$("#file").click();
+  if(a==="copy"){try{await navigator.clipboard.writeText($("#dump").value);toast("Copied to clipboard")}catch(err){$("#dump").select();toast("Select all and copy")}}});
+$("#ov").addEventListener("click",e=>{if(e.target.id==="ov")close()});
+$("#add").addEventListener("click",()=>edit(null));
+$("#data").addEventListener("click",backup);
+$("#undo").addEventListener("click",()=>{if(last){recipes.splice(last.i,0,last.rec);save();render();last=null}$("#toast").classList.remove("on")});
+$("#q").addEventListener("input",e=>{query=e.target.value;render()});
+const step=d=>{const i=CATS.findIndex(c=>c[0]===cat);setTab(CATS[(i+d+CATS.length)%CATS.length][0])};
+$("#prev").addEventListener("click",()=>step(-1));$("#next").addEventListener("click",()=>step(1));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")close();if($("#ov").classList.contains("on")||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  if(e.key==="ArrowRight")step(1);if(e.key==="ArrowLeft")step(-1)});
+$("#file").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;
+  try{const r=JSON.parse(await f.text());if(!Array.isArray(r))throw 0;recipes=r.filter(x=>x&&x.title).map(x=>({...x,id:String(x.id||"r"+Math.random().toString(36).slice(2))}));save();close();render();toast(`Loaded ${recipes.length} cards`)}
+  catch(err){toast("That file isn't a recipe box backup")}e.target.value=""});
+render();
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+}
+</script>
+</body>
+</html>
